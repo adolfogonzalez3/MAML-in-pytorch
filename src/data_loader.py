@@ -2,6 +2,7 @@
 # TODO tieredImageNet
 import random
 import os
+from pathlib import Path
 
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
@@ -37,15 +38,18 @@ def split_omniglot_characters(data_dir, SEED):
     if not os.path.exists(data_dir):
         raise Exception("Omniglot data folder does not exist.")
 
-    character_folders = [os.path.join(data_dir, family, character) \
-                        for family in os.listdir(data_dir) \
-                        if os.path.isdir(os.path.join(data_dir, family)) \
-                        for character in os.listdir(os.path.join(data_dir, family))]
+    character_folders = [
+        os.path.join(data_dir, family, character)
+        for family in os.listdir(data_dir)
+        if os.path.isdir(os.path.join(data_dir, family))
+        for character in os.listdir(os.path.join(data_dir, family))
+    ]
+    character_folders = list(Path(data_dir).rglob('character*'))
     random.seed(SEED)
     random.shuffle(character_folders)
 
     # TODO consider validation set
-    # test_ratio = 0.2  # against total data
+    # test_ratio = 0.2  # against total data 
     # val_ratio = 0.2  # against train data
     # num_total = len(character_folders)
     # num_test = int(num_total * test_ratio)
@@ -73,15 +77,15 @@ def load_imagenet_images(data_dir):
     if not os.path.exists(data_dir):
         raise Exception("ImageNet data folder does not exist.")
 
-    train_classes = [os.path.join(data_dir, 'train', family)\
-                    for family in os.listdir(os.path.join(data_dir, 'train')) \
-                    if os.path.isdir((os.path.join(data_dir, 'train', family)))]
-    train_classes += [os.path.join(data_dir, 'val', family)\
-                     for family in os.listdir(os.path.join(data_dir, 'val')) \
-                     if os.path.isdir((os.path.join(data_dir, family)))]
-    test_classes = [os.path.join(data_dir, 'test', family)\
-                   for family in os.listdir(os.path.join(data_dir, 'test')) \
-                   if os.path.isdir((os.path.join(data_dir, 'test', family)))]
+    train_classes = [os.path.join(data_dir, 'train', family)
+                     for family in os.listdir(os.path.join(data_dir, 'train'))
+                     if os.path.isdir((os.path.join(data_dir, 'train', family)))]
+    train_classes += [os.path.join(data_dir, 'val', family)
+                      for family in os.listdir(os.path.join(data_dir, 'val'))
+                      if os.path.isdir((os.path.join(data_dir, family)))]
+    test_classes = [os.path.join(data_dir, 'test', family)
+                    for family in os.listdir(os.path.join(data_dir, 'test'))
+                    if os.path.isdir((os.path.join(data_dir, 'test', family)))]
 
     return train_classes, test_classes
 
@@ -126,7 +130,6 @@ class Task(object):
             temp = [os.path.join(c, x) for x in os.listdir(c)]
             samples[c] = random.sample(temp, len(temp))
             self.meta_roots += samples[c][:support_num]
-
         self.train_labels = [
             labels[self.get_class(x)] for x in self.train_roots
         ]
@@ -135,7 +138,8 @@ class Task(object):
 
     def get_class(self, sample):
         # raise NotImplementedError("This is abstract class")
-        return os.path.join(*sample.split('/')[:-1])
+        #return os.path.join(*sample.split('/')[:-1])
+        return Path(*Path(sample).parts[:-1])
 
 
 class OmniglotTask(Task):
