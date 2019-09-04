@@ -2,6 +2,7 @@
 import argparse
 import os
 import logging
+from pathlib import Path
 from collections import OrderedDict
 
 import torch
@@ -21,25 +22,26 @@ from evaluate import evaluate
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    '--data_dir',
-    default='data/Omniglot',
-    help="Directory containing the dataset")
+    '--data_dir', default=str(Path('..', 'dataset', 'omniglot', 'data')),
+    help="Directory containing the dataset"
+)
 parser.add_argument(
-    '--model_dir',
-    default='experiments/base_model',
-    help="Directory containing params.json")
+    '--model_dir', default=str(Path('experiments', 'base_model')),
+    help="Directory containing params.json"
+)
 parser.add_argument(
     '--restore_file',
     default=None,
-    help="Optional, name of the file in --model_dir containing weights to \
-          reload before training")  # 'best' or 'train'
+    help=("Optional, name of the file in --model_dir containing weights to"
+          " reload before training")
+)  # 'best' or 'train'
 
 
 def train_single_task(model, task_lr, loss_fn, dataloaders, params):
     """
     Train the model on a single few-shot task.
     We train the model with single or multiple gradient update.
-    
+
     Args:
         model: (MetaLearner) a meta-learner to be adapted for a new task
         task_lr: (float) a task-specific learning rate
@@ -61,7 +63,7 @@ def train_single_task(model, task_lr, loss_fn, dataloaders, params):
 
     # move to GPU if available
     if params.cuda:
-        X_sup, Y_sup = X_sup.cuda(async=True), Y_sup.cuda(async=True)
+        X_sup, Y_sup = X_sup.cuda(), Y_sup.cuda()
 
     # compute model output and loss
     Y_sup_hat = model(X_sup)
@@ -187,8 +189,8 @@ def train_and_evaluate(model,
                 dl_meta = dataloaders['meta']
                 X_meta, Y_meta = dl_meta.__iter__().next()
                 if params.cuda:
-                    X_meta, Y_meta = X_meta.cuda(async=True), Y_meta.cuda(
-                        async=True)
+                    X_meta, Y_meta = X_meta.cuda(), Y_meta.cuda(
+                    )
 
                 a_dict = adapted_state_dicts[n_task]
                 Y_meta_hat = model(X_meta, a_dict)
@@ -225,8 +227,8 @@ def train_and_evaluate(model,
                     'state_dict': model.state_dict(),
                     'optim_dict': meta_optimizer.state_dict()
                 },
-                                      is_best=is_best,
-                                      checkpoint=model_dir)
+                    is_best=is_best,
+                    checkpoint=model_dir)
 
                 # If best_test, best_save_path
                 if is_best:
@@ -271,6 +273,7 @@ if __name__ == '__main__':
     # Load the parameters from json file
     args = parser.parse_args()
     json_path = os.path.join(args.model_dir, 'params.json')
+    print(json_path)
     assert os.path.isfile(
         json_path), "No json configuration file found at {}".format(json_path)
     params = utils.Params(json_path)
@@ -284,14 +287,16 @@ if __name__ == '__main__':
 
     # Set the random seed for reproducible experiments
     torch.manual_seed(SEED)
-    if params.cuda: torch.cuda.manual_seed(SEED)
+    if params.cuda:
+        torch.cuda.manual_seed(SEED)
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'train.log'))
 
     # NOTE These params are only applicable to pre-specified model architecture.
     # Split meta-training and meta-testing characters
-    if 'Omniglot' in args.data_dir and params.dataset == 'Omniglot':
+    print(args.data_dir, 'omniglot' in args.data_dir)
+    if 'omniglot' in args.data_dir and params.dataset == 'Omniglot':
         params.in_channels = 1
         meta_train_classes, meta_test_classes = split_omniglot_characters(
             args.data_dir, SEED)
